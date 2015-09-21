@@ -59,6 +59,12 @@ Your library and its associate data will now be installed in @code{/usr/local}
 
 The WordNet library consists of a few sections: Search, Morphology and Utilities. This Racket interface to the library leaves out some of the utilities because they are largely redundant. The documentation of the original C library functions is available @hyperlink["https://wordnet.princeton.edu/wordnet/documentation/"]{here}.
 
+The library must be initialized before any of the functions can be used. The following function initializes the library.
+
+@defproc[(wn-init) integer?]{
+                   Returns 0 upon successful initialization, a non-zero number othrewise. This function must be called before any of the other functions are called. 
+}
+
 @section{High Level Interface}
 This section describes a higher level interface for accessing the word-net functions. It largely consists of two things: Searching and Lemmatization. 
 The searching functions are defined as functions that return lists of words based on the search criteria. All the search-functions have an identical format which is as follows. 
