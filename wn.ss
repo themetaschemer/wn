@@ -7,16 +7,6 @@
 
 (define-ffi-definer define-wn (ffi-lib "libWN"))
 
-
-
-#|
-Database Search   wnsearch (3WN)     search.o
-Morphology        morph (3WN)        morph.o
-Misc. Utility     wnutil (3WN)       wnutil.o
-Binary Search     binsrch (3WN)      binsrch.no
-|#
-
-
 ;;;------------------------------------------------------------------------------------
 ;;; Some basic definitions
 ;;;------------------------------------------------------------------------------------
@@ -62,8 +52,8 @@ Binary Search     binsrch (3WN)      binsrch.no
            recursive-holonym = -13                   
            cause = 14
            recursive-cause = -14                   
-           particple-of-verb = 15
-           recursive-particple-of-verb = -15                   
+           participle-of-verb = 15
+           recursive-participle-of-verb = -15                   
            see-also = 16
            recursive-see-also = -16                   
            pertains-to = 17
@@ -116,20 +106,28 @@ Binary Search     binsrch (3WN)      binsrch.no
 
 (define search-type-list
   '(
-    antonym recursive-antonym hypernym recursive-hypernym hyponym recursive-hyponym entails recursive-entails similar recursive-similar 
-            member-meronym recursive-member-meronym substance-meronym recursive-substance-meronym part-meronym recursive-part-meronym
-            member-holonym recursive-member-holonym substance-holonym recursive-substance-holonym part-holonym recursive-part-holonym 
-            meronym recursive-meronym holonym recursive-holonym cause recursive-cause particple-of-verb recursive-particple-of-verb 
-            see-also recursive-see-also pertains-to recursive-pertains-to attribute recursive-attribute
-            verb-group recursive-verb-group derivation recursive-derivation classification recursive-classification class recursive-class
-            synonym recursive-synonyms polysemy recursive-polysemy frame recursive-frame noun-coordinate recursive-noun-coordinate 
-            relative recursive-relative hierarchical-meronym recursive-hierarchical-meronym hierarchical-holonym recursive-hierarchical-holonym
-            keyword-by-substring recursive-keyword-by-substring overview recursive-overview             
-            classification-category recursive-classification-category classification-usage recursive-classification-usage 
-            classification-regional recursive-classification-regional
-            class-category recursive-class-category class-usage recursive-class-usage class-regional 
-            recursive-class-regional instance-of recursive-instance-of instances recursive-instances
-            ))
+    antonym recursive-antonym hypernym recursive-hypernym hyponym
+    recursive-hyponym entails recursive-entails similar recursive-similar 
+    member-meronym recursive-member-meronym substance-meronym 
+    recursive-substance-meronym part-meronym recursive-part-meronym
+    member-holonym recursive-member-holonym substance-holonym 
+    recursive-substance-holonym part-holonym recursive-part-holonym 
+    meronym recursive-meronym holonym recursive-holonym cause
+    recursive-cause participle-of-verb recursive-participle-of-verb 
+    see-also recursive-see-also pertains-to recursive-pertains-to
+    attribute recursive-attribute verb-group recursive-verb-group derivation
+    recursive-derivation classification recursive-classification class
+    recursive-class synonym recursive-synonyms polysemy recursive-polysemy
+    frame recursive-frame noun-coordinate recursive-noun-coordinate 
+    relative recursive-relative hierarchical-meronym recursive-hierarchical-meronym
+    hierarchical-holonym recursive-hierarchical-holonym keyword-by-substring
+    recursive-keyword-by-substring overview recursive-overview             
+    classification-category recursive-classification-category classification-usage
+    recursive-classification-usage classification-regional recursive-classification-regional
+    class-category recursive-class-category class-usage recursive-class-usage class-regional 
+    recursive-class-regional instance-of recursive-instance-of instances recursive-instances
+    ))
+
 (define (search-type? x)
   (member x search-type-list))
 
@@ -137,10 +135,10 @@ Binary Search     binsrch (3WN)      binsrch.no
   (and (search-type? x)
        (not (member x '(see-also pertains-to verb-group polysemy frame relative keyword-by-substring overview)))))
 
-
 ;;;------------------------------------------------------------------------------------
 ;; WordNet part of speech stuff
 ;;;------------------------------------------------------------------------------------
+
 (define numparts        4)        ;; number of parts of speech
 (define numframes       35)       ;; number of verb frames
 
@@ -226,11 +224,6 @@ Binary Search     binsrch (3WN)      binsrch.no
      [head-word                   _string]                  ;; if pos is "s", this is cluster head word
      [head-sense                  _short]))                 ;; sense number of headword
 
-
-
-
-
-
 ;; Synset Index
 (define-cstruct _c-sns-index
   ([sense-key         _string]                ;; sense key
@@ -263,13 +256,6 @@ Binary Search     binsrch (3WN)      binsrch.no
 
 ;; Primary search algorithm for use with programs (returns data structure)
 (define-wn find-the-info-ds (_fun _string  _parts-of-speech _search-type _int -> _c-synset-pointer/null) #:c-id findtheinfo_ds)
-
-;; findtheinfo_ds() returns a linked list data structures representing synsets.
-;; Senses are linked through the nextss field of a Synset data structure.
-;; For each sense, synsets that match the search specified with ptr_type are linked through the ptrlist field.
-;; See Synset Navigation below, for detailed information on the linked lists returned.
-
-
 
 ;; Set bit for each search type that is valid for the search word
 ;;   passed and return bit mask.
@@ -454,15 +440,25 @@ Binary Search     binsrch (3WN)      binsrch.no
 (define-syntax (declare-search-functions x)
   (syntax-case x ()
     [(_ scope search-type ...)
-     (with-syntax ([(fname ...) (datum->syntax #'scope (map (λ (d) (if (symbol? d)
-                                                                       (string->symbol (format "~as" d))
-                                                                       (string->symbol (format "~a" (car d))))) (syntax->datum #'(search-type ...))))]
-                   [(sname ...) (datum->syntax #'scope (map (λ (d) (if (symbol? d) d (cadr d))) (syntax->datum #'(search-type ...))))]
-                   [(recursive-search-type ...) (datum->syntax #'scope (map 
-                                                                        (λ (d) (if (symbol? d)
-                                                                                   (string->symbol (format "recursive-~a" d))
-                                                                                   (string->symbol (format "recursive-~a" (cadr d)))))
-                                                                        (syntax->datum #'(search-type ...))))])
+     (with-syntax ([(fname ...) 
+                    (datum->syntax #'scope
+                                   (map 
+                                    (λ (d) (if (symbol? d)
+                                               (string->symbol (format "~as" d))
+                                               (string->symbol (format "~a" (car d)))))
+                                    (syntax->datum #'(search-type ...))))]
+                   [(sname ...) 
+                    (datum->syntax #'scope
+                                   (map 
+                                    (λ (d) (if (symbol? d) d (cadr d)))
+                                    (syntax->datum #'(search-type ...))))]
+                   [(recursive-search-type ...) 
+                    (datum->syntax #'scope 
+                                   (map 
+                                    (λ (d) (if (symbol? d)
+                                               (string->symbol (format "recursive-~a" d))
+                                               (string->symbol (format "recursive-~a" (cadr d)))))
+                                    (syntax->datum #'(search-type ...))))])
                   #'(begin
                       (define (fname word part-of-speech #:recursive [recursive #t])
                         (if recursive
@@ -471,11 +467,15 @@ Binary Search     binsrch (3WN)      binsrch.no
                       ...))]))
 
 (declare-search-functions all-results ;; All functions are declared at the same scope of this name.
-                          antonym hypernym hyponym entail similar  member-meronym substance-meronym part-meronym
-                          member-holonym substance-holonym part-holonym  meronym holonym cause [participles-of-verb participle-of-verb]
-                          attribute derivation classification [classes class] synonym noun-coordinate hierarchical-meronym
-                          hierarchical-holonym [classification-categories classification-category] classification-usage classification-regional
-                          [class-categories class-category] class-usage class-regional [instances-of instance-of] instance)
+                          antonym hypernym hyponym entail similar  member-meronym
+                          substance-meronym part-meronym member-holonym substance-holonym part-holonym
+                          meronym holonym cause [participles-of-verb participle-of-verb] attribute
+                          derivation classification [classes class] synonym noun-coordinate
+                          hierarchical-meronym hierarchical-holonym
+                          [classification-categories classification-category]
+                          classification-usage classification-regional
+                          [class-categories class-category] class-usage class-regional
+                          [instances-of instance-of] instance)
  
 (define (lemma word part-of-speech) (morph-str word part-of-speech))
 
