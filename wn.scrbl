@@ -239,7 +239,7 @@ The following example illustrates how to navigate a synset result and extract th
         (define (hypernyms word part-of-speech search-type)
           (let ([synset (find-the-info-ds word part-of-speech 'recursive-hypernym 0)])
             (remove-duplicates
-               (for*/list ([sense (in-sense synset)]
+               (for*/list ([sense (in-senses synset)]
                            [result (in-results sense)]
                            [word  (in-words result)])
                   word))))]{}
