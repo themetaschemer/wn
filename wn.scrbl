@@ -55,7 +55,7 @@ Now, reconfigure and build the distribution. Replace the prefix to suit your ins
 Your library and its associate data will now be installed in @code{/usr/local}
 
 @section{About the library}
-@defmodule[wn #:packages ("base")]
+@defmodule[wn/wn #:packages ("base")]
 
 The WordNet library consists of a few sections: Search, Morphology and Utilities. This Racket interface to the library leaves out some of the utilities because they are largely redundant. The documentation of the original C library functions is available @hyperlink["https://wordnet.princeton.edu/wordnet/documentation/"]{here}.
 

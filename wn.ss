@@ -400,7 +400,7 @@
 
 ;; Iterators over the results
 
-(define-syntax (in-sense x)
+(define-syntax (in-senses x)
   (syntax-case x ()
     [(_ synset-ptr)
      #'(in-generator (let loop ([s synset-ptr])
@@ -423,19 +423,34 @@
                        (for ([i (in-range (c-synset-word-count s))])
                          (yield (ptr-ref (c-synset-c-words s) _string i)))))]))
 
-;; A cleaner way to access the words inside a synset
+(define (gloss* word [part-of-speech #f])
+  (reverse 
+   (let ([synset (if part-of-speech 
+                     (find-the-info-ds word part-of-speech 'hypernym 0)
+                     (ormap (λ (part-of-speech) (find-the-info-ds word part-of-speech 'hypernym 0)) parts-of-speech))])
+     (for/fold ([res '()]) ([sense (in-senses synset)])
+       (cons (c-synset-definition sense) res)))))
 
 (define (c-synset-words c-synset-ptr)
   (for/list ([word (in-words c-synset-ptr)]) word))
 
-
 (define (all-results word part-of-speech search-type)
   (let ([synset (find-the-info-ds word part-of-speech search-type 0)])
     (remove-duplicates
-     (for*/list ([sense (in-sense synset)]
+     (for*/list ([sense (in-senses synset)]
                  [result (in-results sense)]
                  [word  (in-words result)])
                 word))))
+
+(define (all-results-in-all-parts-of-speech word search-type)
+  (remove-duplicates
+   (for/fold ([res '()]) ([part-of-speech parts-of-speech])
+     (let ([synset (find-the-info-ds word part-of-speech search-type 0)])
+       (append res
+               (for*/list ([sense (in-senses synset)]
+                           [result (in-results sense)]
+                           [word  (in-words result)])
+                          word))))))
 
 (define-syntax (declare-search-functions x)
   (syntax-case x ()
@@ -460,10 +475,14 @@
                                                (string->symbol (format "recursive-~a" (cadr d)))))
                                     (syntax->datum #'(search-type ...))))])
                   #'(begin
-                      (define (fname word part-of-speech #:recursive [recursive #t])
+                      (define (fname word [part-of-speech #f] #:recursive [recursive #t])
                         (if recursive
-                            (all-results word part-of-speech 'recursive-search-type)
-                            (all-results word part-of-speech 'sname)))
+                            (if part-of-speech 
+                                (all-results                        word part-of-speech 'recursive-search-type)
+                                (all-results-in-all-parts-of-speech word 'recursive-search-type))
+                            (if part-of-speech 
+                                (all-results                        word part-of-speech 'sname)
+                                (all-results-in-all-parts-of-speech word 'sname))))
                       ...))]))
 
 (declare-search-functions all-results ;; All functions are declared at the same scope of this name.
