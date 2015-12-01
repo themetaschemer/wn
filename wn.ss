@@ -3,7 +3,6 @@
 (require ffi/unsafe
          ffi/unsafe/define)
 (require racket/generator)
-(require racket/splicing)
 
 (define-ffi-definer define-wn (ffi-lib "libWN"))
 
@@ -199,7 +198,7 @@
      [file-num                    _int]                ;; file number that synset comes from
      [part-of-speech              _string]             ;; part of speech
      [word-count                  _int]                ;; number of words in synset
-     [c-words                     _string-pointer]     ;; words in synset (pointer to string)|#
+     [c-words                     _string-pointer/null];; words in synset (pointer to string)|#
      [lex-id                      _int-pointer]        ;; unique id in lexicographer file (pointer to int)|#
      [wn-sense                    _int-pointer]        ;; sense number in wordnet (pointer to int)|#
      [which-word                  _int]                ;; which word in synset we're looking for
@@ -406,7 +405,8 @@
      #'(in-generator (let loop ([s synset-ptr])
                        (when s
                              (yield s)
-                             (loop (c-synset-next-synset s)))))]))
+                             (loop (c-synset-next-synset s)))
+                       #f))]))
 
 (define-syntax (in-results x)
   (syntax-case x ()
@@ -414,14 +414,21 @@
      #'(in-generator (let loop ([s synset-ptr])
                        (when s
                              (yield s)
-                             (loop (c-synset-pointer-list s)))))]))
+                             (loop (c-synset-pointer-list s)))
+                       #f))]))
 
 (define-syntax (in-words x)
   (syntax-case x ()
     [(_ synset-ptr)
-     #'(in-generator (let ([s synset-ptr])
-                       (for ([i (in-range (c-synset-word-count s))])
-                         (yield (ptr-ref (c-synset-c-words s) _string i)))))]))
+     #'(in-generator (let* ([s synset-ptr]
+                            [n (c-synset-word-count s)])
+                       (let loop ([i 0])
+                         (cond
+                          [(= i n) 'done]
+                          [else (let ([w (ptr-ref (c-synset-c-words s) _string i)])
+                                  (if w
+                                      (begin (yield w) (loop (+ i 1)))
+                                      (loop (+ i 1))))]))))]))
 
 (define (gloss* word [part-of-speech #f])
   (reverse 
@@ -486,17 +493,57 @@
                       ...))]))
 
 (declare-search-functions all-results ;; All functions are declared at the same scope of this name.
-                          antonym hypernym hyponym entail similar  member-meronym
+                          antonym hypernym hyponym [entails entails] similar  member-meronym
                           substance-meronym part-meronym member-holonym substance-holonym part-holonym
                           meronym holonym cause [participles-of-verb participle-of-verb] attribute
-                          derivation classification [classes class] synonym noun-coordinate
+                          derivation classification [classes class] synonym
                           hierarchical-meronym hierarchical-holonym
                           [classification-categories classification-category]
                           classification-usage classification-regional
                           [class-categories class-category] class-usage class-regional
                           [instances-of instance-of] instance)
+
+
+(define (noun-coordinates word #:recursive [recursive #t])
+  (let ([synset (find-the-info-ds word 'noun (if recursive 'recursive-noun-coordinate 'noun-coordinate) 0)])
+    (remove-duplicates
+     (for*/list ([sense (in-senses synset)]
+                 [result (in-results sense)]
+                 [word  (in-words result)])
+                word))))
  
 (define (lemma word part-of-speech) (morph-str word part-of-speech))
+
+(define (lemmatize-word word)
+  (or (ormap (λ (part-of-speech) 
+               (let ([l (lemma word part-of-speech)])
+                 (if (equal? l word) #f l)))
+             parts-of-speech)
+      word))
+
+(define (lemmatize-phrase str)
+  (for/fold ([str ""]) ([word (map lemmatize-word (regexp-split #rx" "  str))]
+                        [i    (in-naturals 0)])
+    (if (= i 0)
+        word
+        (string-append str " " word))))
+
+
+(define (words-from-line line) (regexp-match* #px"(\\b[^\\s\"/]+\\b)" (string-downcase line)))
+
+(define (lemmas-from-line line stop-words word-frequency low high) 
+  (for/fold ([lemmas '()]) ([w (regexp-match* #px"(\\b[^\\s\"/]+\\b)" (string-downcase line))]) 
+    (let ([w (lemmatize-word w)])
+      (if (or (and stop-words (dict-ref stop-words w #f)) (not (has-reasonable-frequency w word-frequency low high)))
+          lemmas
+          (cons w lemmas)))))
+
+(define (has-reasonable-frequency w word-freq low high)
+  (or (not word-freq)
+      (let ([wf (dict-ref word-freq w 0)])
+        (and (>= wf low) (<= wf high)))))
+
+
 
 (provide (all-defined-out))
 

@@ -1,5 +1,5 @@
 #lang scribble/manual
-@(require racket/base "wn.ss")
+@(require (for-label racket/base "wn.ss")) 
 @title{WordNet - A Lexical Database for English}
 
 This is a Racket FFI interface to the Princeton University's WordNet® library. The following excerpt from their website adequately summarizes what WordNet is.
