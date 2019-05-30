@@ -14,7 +14,7 @@ This package has been developed and tested on Mac OS X (10.10). The instructions
 
 @section{Installing the WordNet library}
 
-The WordNet library is available from @link["https://wordnet.princeton.edu/wordnet/download/current-version/"]{here}. The default library available from WordNet links into a static library, which is unusable by the Racket FFI.
+The WordNet library is available from @link["https://wordnet.princeton.edu/download/current-version/"]{here}. The default library available from WordNet links into a static library, which is unusable by the Racket FFI.
 Follow the instructions in this section to build a shared library.
 
 Assume that ~/Downloads/WordNet-3.0 is the directory into which the tarball has been untar'd.
