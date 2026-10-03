@@ -10,3 +10,6 @@
 
 
 
+(define deps '("base"))
+(define build-deps '("racket-doc"
+                     "scribble-lib"))
